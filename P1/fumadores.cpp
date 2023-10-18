@@ -12,6 +12,9 @@ using namespace scd ;
 // numero de fumadores 
 
 const int num_fumadores = 3 ;
+int ing_mostrador = -1;
+Semaphore mostrador_libre = 1;
+Semaphore fumadores_libres = 3;
 
 //-------------------------------------------------------------------------
 // Función que simula la acción de producir un ingrediente, como un retardo
@@ -39,9 +42,19 @@ int producir_ingrediente()
 //----------------------------------------------------------------------
 // función que ejecuta la hebra del estanquero
 
-void funcion_hebra_estanquero(  )
+void funcion_hebra_estanquero()
 {
+   while (true)
+   {
+      // Fabrica el ingrediente
+      int ingrediente_producido = producir_ingrediente();
 
+      // Ocupa el mostrador o espera por si hay alguno recogiendo
+      mostrador_libre.sem_wait();
+
+      // Produce el ingrediente
+      ing_mostrador = ingrediente_producido;
+   }
 }
 
 //-------------------------------------------------------------------------
@@ -73,7 +86,27 @@ void  funcion_hebra_fumador( int num_fumador )
 {
    while( true )
    {
+      if (ing_mostrador == num_fumador)
+      {
+         // calcular milisegundos aleatorios que va a tardar en recoger
+         chrono::milliseconds duracion_recogida(aleatorio<10,20>());
 
+         // informa de que está recogiendo el ingrediente
+         cout << "Fumador " << num_fumador << "  :"
+         << " recoge el ingrediente (" << duracion_recogida.count() << " milisegundos)" << endl;
+
+         //Libera el mostrador
+         ing_mostrador = -1;
+         mostrador_libre.sem_signal();
+
+         // El fumador indica que no está disponible para recoger ingredientes y procede a fumar
+         fumadores_libres.sem_wait();
+         fumar(num_fumador);
+
+         // Una vez termina indica qu vuelve a estar disponible para fumar
+         fumadores_libres.sem_signal();
+      }
+      
    }
 }
 
@@ -81,6 +114,25 @@ void  funcion_hebra_fumador( int num_fumador )
 
 int main()
 {
-   // declarar hebras y ponerlas en marcha
-   // ......
+   thread hebra_estanquero(funcion_hebra_estanquero),
+          hebra_fumador1(funcion_hebra_fumador,0),
+          hebra_fumador2(funcion_hebra_fumador,1),
+          hebra_fumador3(funcion_hebra_fumador,2);
+/*
+   for (int i = 0; i < num_fumadores; i++)
+   {
+      thread hebra_fumador(funcion_hebra_fumador,i);
+   }
+
+   for (int i = 0; i < num_fumadores; i++)
+   {
+      hebra_estanquero.join();
+   }
+*/
+   hebra_estanquero.join();
+   hebra_fumador1.join();
+   hebra_fumador2.join();
+   hebra_fumador2.join();
+
+
 }

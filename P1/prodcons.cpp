@@ -3,6 +3,7 @@
 #include <thread>
 #include <mutex>
 #include <random>
+#include<iomanip>
 #include "scd.h"
 
 using namespace std ;
@@ -34,7 +35,7 @@ unsigned producir_dato()
    const unsigned dato_producido = siguiente_dato ;
    siguiente_dato++ ;
    cont_prod[dato_producido] ++ ;
-   cout << "producido: " << dato_producido << endl << flush ;
+   cout << "producido: " << dato_producido << endl << endl << flush;
    return dato_producido ;
 }
 //----------------------------------------------------------------------
@@ -52,39 +53,38 @@ void consumir_dato( unsigned dato )
 void mostrar_buffer()
 {
    // Pintar flecha de primero libre
-   for (int i = 1; i < tam_vec; i++)
+   for (int i = 1; i < primero_libre; i++)
    {
-      cout << "   ";
+      cout << "     ";
    }
-   cout << "  V Primero Libre" << endl;
+   cout << "    V Primero Libre" << endl;
 
    // Pintar ralla superior
    for (int i = 0; i < tam_vec; i++)
    {
-      cout << "___";
+      cout << "_____";
    }
-   cout << endl;
+   cout << "_" << endl;
    
    // Pintar contenido del buffer
    for (int i = 0; i < tam_vec; i++)
    {
-      cout << "|" << buffer[i];
+      cout << "|" << setw(4) << buffer[i];
    }
    cout << "|" << endl;
 
    // Pintar ralla inferior
    for (int i = 0; i < tam_vec; i++)
    {
-      cout << "___";
+      cout << "_____";
    }
-   cout << endl;
+   cout << "_" << endl;
    
-   // Pintar flecha de ultimo ocupado
-   for (int i = 1; i < tam_vec; i++)
+   for (int i = 1; i < ultimo_ocupado; i++)
    {
-      cout << "   ";
+      cout << "     ";
    }
-   cout << "  A Ultimo ocupado" << endl;
+   cout << "    A Ultimo ocupado" << endl;
    
 }
 //----------------------------------------------------------------------
