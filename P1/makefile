@@ -4,11 +4,17 @@
 
 compilador:=g++
 
-pc: prodcons_exe
-	./$<
-
 fu: fumadores_exe
 	./$< 
+
+fur: fumadores_remix_exe
+	./$<
+
+pcc: prodcons_cola_exe
+	./$<
+
+pcp: prodcons_pila_exe
+	./$<
 
 ## esto solo se usa para probar que la plantilla compila
 ## (da error al ejecutar)
