@@ -30,6 +30,7 @@ unsigned
 
 Semaphore libres = tam_vec;
 Semaphore ocupadas = 0;
+Semaphore top_libre = 1;
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
 //----------------------------------------------------------------------
@@ -139,10 +140,10 @@ void  funcion_hebra_productora(int num_hebra, int paso)
    {
          libres.sem_wait();
          int dato = producir_dato(num_hebra) ;
-         //top_libre.sem_wait();
+         top_libre.sem_wait();
          buffer[ultimo_libre] = dato;
          ultimo_libre++;
-         //top_libre.sem_signal();
+         top_libre.sem_signal();
          ocupadas.sem_signal(); 
          mostrar_buffer();
    }
@@ -156,10 +157,10 @@ void funcion_hebra_consumidora(int num_hebra, int paso)
    {
          int dato;
          ocupadas.sem_wait();
-         //top_libre.sem_wait();
+         top_libre.sem_wait();
          dato = buffer[ultimo_libre-1];
          ultimo_libre--;
-         //top_libre.sem_signal();
+         top_libre.sem_signal();
          libres.sem_signal();
          consumir_dato(dato, num_hebra);
     }

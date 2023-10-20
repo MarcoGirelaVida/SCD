@@ -4,6 +4,8 @@
 
 compilador:=g++
 
+all: fumadores_exe fumadores_remix_exe prodcons_cola_exe prodcons_pila_exe prodcons_cola_multi_exe prodcons_pila_multi_exe
+
 fu: fumadores_exe
 	./$< 
 
@@ -22,23 +24,9 @@ pccm: prodcons_cola_multi_exe
 pcpm: prodcons_pila_multi_exe
 	./$<
 
-## esto solo se usa para probar que la plantilla compila
-## (da error al ejecutar)
-pcpla: prodcons-plantilla_exe 
-	./$< 
-
-## esto solo se usa para probar que la plantilla compila
-## (al ejecutarse no hace nada)
-fupla: fumadores-plantilla_exe 
-	./$< 
-
-## solo para tests
-t: test-semaforos_exe
-	./$< | more
-
 ## regla para compilar (.cpp --> _exe)
 %_exe: %.cpp scd.cpp scd.h
 		$(compilador) -std=c++11 -pthread -o $@ $< scd.cpp
 
-clean:
+mr.proper:
 	rm -f *_exe

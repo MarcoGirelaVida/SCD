@@ -29,8 +29,10 @@ unsigned
    producidos_por_productor[n_prod] = {0},
    consumidos_por_consumidor[n_cons] = {0};
 
-Semaphore libres = tam_vec;
-Semaphore ocupadas = 0;
+Semaphore libres = tam_vec,
+            ocupadas = 0,
+            ultimo_ocupado_libre = 1,
+            primero_libre_libre = 1;
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
 //----------------------------------------------------------------------
@@ -152,8 +154,10 @@ void  funcion_hebra_productora(int num_hebra, int paso)
    {
       int dato = producir_dato(num_hebra) ;
       libres.sem_wait();
+      primero_libre_libre.sem_wait();
       buffer[primero_libre] = dato;
       primero_libre = (primero_libre + 1) % tam_vec;
+      primero_libre_libre.sem_signal();
       ocupadas.sem_signal();
       mostrar_buffer();
    }
@@ -167,8 +171,10 @@ void funcion_hebra_consumidora(int num_hebra, int paso)
    {
       int dato ;
       ocupadas.sem_wait();
+      ultimo_ocupado_libre.sem_wait();
       dato = buffer[ultimo_ocupado];
       ultimo_ocupado = (ultimo_ocupado + 1) % tam_vec;
+      ultimo_ocupado_libre.sem_signal();
       libres.sem_signal();
       consumir_dato( dato, num_hebra) ;
     }
