@@ -16,6 +16,12 @@ pcc: prodcons_cola_exe
 pcp: prodcons_pila_exe
 	./$<
 
+pccm: prodcons_cola_multi_exe
+	./$<
+
+pcpm: prodcons_pila_multi_exe
+	./$<
+
 ## esto solo se usa para probar que la plantilla compila
 ## (da error al ejecutar)
 pcpla: prodcons-plantilla_exe 

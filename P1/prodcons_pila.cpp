@@ -19,7 +19,7 @@ unsigned
    cont_prod[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
    cont_cons[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
    siguiente_dato       = 0 ,  // siguiente dato a producir en 'producir_dato' (solo se usa ahí)
-   ultimo_libre = 0,
+   primero_libre = 0,
    buffer[tam_vec] = {0};
 
 Semaphore top_libre = 1;
@@ -53,13 +53,13 @@ void consumir_dato( unsigned dato )
 void mostrar_buffer()
 {
    // Pintar flecha de primero libre
-   for (int i = 1; i < ultimo_libre; i++)
+   for (int i = 1; i < primero_libre; i++)
    {
       cout << "     ";
    }
    cout << "   top" << endl;
 
-   for (int i = 1; i < ultimo_libre; i++)
+   for (int i = 1; i < primero_libre; i++)
    {
       cout << "     ";
    }
@@ -114,13 +114,12 @@ void  funcion_hebra_productora(  )
    {
          libres.sem_wait();
          int dato = producir_dato() ;
-         //top_libre.sem_wait();
-         buffer[ultimo_libre] = dato;
-         ultimo_libre++;
-         //top_libre.sem_signal();
+         top_libre.sem_wait();
+         buffer[primero_libre] = dato;
+         primero_libre++;
+         top_libre.sem_signal();
          ocupadas.sem_signal(); 
          mostrar_buffer();
-      //}
    }
 }
 
@@ -130,16 +129,14 @@ void funcion_hebra_consumidora(  )
 {
    for( unsigned i = 0 ; i < num_items ; i++ )
    {
-      //if (ultimo_libre){
          int dato;
          ocupadas.sem_wait();
-         //top_libre.sem_wait();
-         dato = buffer[ultimo_libre-1];
-         ultimo_libre--;
-         //top_libre.sem_signal();
+         top_libre.sem_wait();
+         dato = buffer[primero_libre-1];
+         primero_libre--;
+         top_libre.sem_signal();
          libres.sem_signal();
          consumir_dato(dato);
-      //}
     }
 }
 //----------------------------------------------------------------------
@@ -147,7 +144,7 @@ void funcion_hebra_consumidora(  )
 int main()
 {
    cout << "-----------------------------------------------------------------" << endl
-        << "Problema de los productores-consumidores (solución LIFO o FIFO ?)." << endl
+        << "Problema de los productores-consumidores (solución LIFO simple)." << endl
         << "------------------------------------------------------------------" << endl
         << flush ;
 
