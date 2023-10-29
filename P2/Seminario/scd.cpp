@@ -3,7 +3,7 @@
 // Semaphores and Hoare monitors implementation using C++11 concurrency features.
 // both classes implement FIFO order.
 //
-// Carlos Ureña Almagro 2017-2021
+// Carlos Ureña Almagro 2017-2022
 //
 // -----------------------------------------------------------------------------
 // Semaphores (class 'Semaphore')
@@ -519,9 +519,8 @@ void SemaphoreRepr::sem_wait()
 
 void SemaphoreRepr::sem_signal()
 {
-   //LOGM( "sem. " + name+": antes de 'enter' " );
-
-   bool do_leave =  true ;
+   
+   bool do_leave = true ; // sometimes calling 'leave' is not needed (see below)
 
    enter();  // wait in 'enter_queue' if neccesary
 
@@ -657,17 +656,17 @@ unsigned CondVar::get_nwt()
 
 HoareMonitor::HoareMonitor()
 {
-   name = "unknown" ;
-   enter_queue = new FIFOQueue() ;
-   urgent_queue        = new FIFOQueue() ;
+   name         = "unknown" ;
+   enter_queue  = new FIFOQueue() ;
+   urgent_queue = new FIFOQueue() ;
 }
 // -----------------------------------------------------------------------------
 
 HoareMonitor::HoareMonitor( const std::string & p_name )
 {
-   name = p_name ;
-   enter_queue = new FIFOQueue() ;
-   urgent_queue        = new FIFOQueue() ;
+   name          = p_name ;
+   enter_queue   = new FIFOQueue() ;
+   urgent_queue  = new FIFOQueue() ;
 }
 // -----------------------------------------------------------------------------
 HoareMonitor::~HoareMonitor()
