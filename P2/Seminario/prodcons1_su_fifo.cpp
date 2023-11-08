@@ -3,15 +3,11 @@
 // Sistemas concurrentes y Distribuidos.
 // Seminario 2. Introducción a los monitores en C++11.
 //
-// Archivo: prodcons1_su.cpp
+// Archivo: prodcons1_su_fifo.cpp
 //
 // Ejemplo de un monitor en C++11 con semántica SU, para el problema
 // del productor/consumidor, con productor y consumidor únicos.
-// Opcion LIFO
-//
-// Historial:
-// Creado el 30 Sept de 2022. (adaptado de prodcons2_su.cpp)
-// 20 oct 22 --> paso este archivo de FIFO a LIFO, para que se corresponda con lo que dicen las transparencias
+// Opcion FIFO
 // -----------------------------------------------------------------------------------
 
 
@@ -106,7 +102,8 @@ class ProdConsSU1 : public HoareMonitor
    num_celdas_total = 10;   //   núm. de entradas del buffer
  int                        // variables permanentes
    buffer[num_celdas_total],//   buffer de tamaño fijo, con los datos
-   primera_libre ;          //   indice de celda de la próxima inserción ( == número de celdas ocupadas)
+   primera_libre ,          //   indice de celda de la próxima inserción
+   ultima_ocupada ;         //   indice de celda de la próxima lectura        // MODIFICACIÓN - VARIABLE AÑADIDA
 
  CondVar                    // colas condicion:
    ocupadas,                //  cola donde espera el consumidor (n>0)
@@ -122,6 +119,7 @@ class ProdConsSU1 : public HoareMonitor
 ProdConsSU1::ProdConsSU1(  )
 {
    primera_libre = 0 ;
+   ultima_ocupada = 0;                                         // MODIFICACIÓN - ZONA DUDA(leve), el valor al que se inicializa ultima_ocupada
    ocupadas      = newCondVar();
    libres        = newCondVar();
 }
@@ -130,16 +128,17 @@ ProdConsSU1::ProdConsSU1(  )
 
 int ProdConsSU1::leer(  )
 {
-   // esperar bloqueado hasta que 0 < primera_libre
-   if ( primera_libre == 0 )
+   // esperar bloqueado hasta que primera_libre != ultima_ocupada
+   if ( ultima_ocupada == primera_libre )// ocupadas.empty()  MODIFICACIÓN - DUDA
       ocupadas.wait();
-
-   //cout << "leer: ocup == " << primera_libre << ", total == " << num_celdas_total << endl ;
-   assert( 0 < primera_libre  );
+   
+   //cout << "leer: ocup == " << primera_libre - ultima_ocupada << ", total == " << num_celdas_total << endl ;       // MODUFICACIÓN en la resta
+   //assert( primera_libre == ultima_ocupada );         MODIFICACIÓN - DUDA(leve), la comparación
 
    // hacer la operación de lectura, actualizando estado del monitor
-   primera_libre-- ;
-   const int valor = buffer[primera_libre] ;
+   // Incremento (decremento respecto a primera libre) el valor de última ocupada, pues tras la lectura, hay una ocupada menos
+   const int valor = buffer[ultima_ocupada];                   // MODIFICACIÓN (se consulta ultima_ocupada)
+   ultima_ocupada = (ultima_ocupada + 1) % num_celdas_total;   // MODIFICACIÓN
    
    // señalar al productor que hay un hueco libre, por si está esperando
    libres.signal();
@@ -152,15 +151,15 @@ int ProdConsSU1::leer(  )
 void ProdConsSU1::escribir( int valor )
 {
    // esperar bloqueado hasta que primera_libre < num_celdas_total
-   if ( primera_libre == num_celdas_total )
+   if ( )        // MODIFICACIÓN
       libres.wait();
 
    //cout << "escribir: ocup == " << primera_libre << ", total == " << num_celdas_total << endl ;
-   assert( primera_libre < num_celdas_total );
+   //assert(  );                   MODIFICACIÓN
 
    // hacer la operación de inserción, actualizando estado del monitor
    buffer[primera_libre] = valor ;
-   primera_libre++ ;
+   primera_libre = (primera_libre + 1) % num_celdas_total;
 
    // señalar al consumidor que ya hay una celda ocupada (por si esta esperando)
    ocupadas.signal();
@@ -191,7 +190,7 @@ void funcion_hebra_consumidora( MRef<ProdConsSU1>  monitor )
 int main()
 {
    cout << "--------------------------------------------------------------------" << endl
-        << "Problema del productor-consumidor únicos (Monitor SU, buffer LIFO). " << endl
+        << "Problema del productor-consumidor únicos (Monitor SU, buffer FIFO). " << endl
         << "--------------------------------------------------------------------" << endl
         << flush ;
 
