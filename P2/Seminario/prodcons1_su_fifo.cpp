@@ -22,7 +22,7 @@ using namespace std ;
 using namespace scd ;
 
 constexpr int
-   num_items = 15 ;   // número de items a producir/consumir
+   NUM_ITEMS = 15 ;   // número de items a producir/consumir
 int
    siguiente_dato = 0 ; // siguiente valor a devolver en 'producir_dato'
    
@@ -34,8 +34,8 @@ constexpr int
 mutex
    mtx ;                 // mutex de escritura en pantalla
 unsigned
-   cont_prod[num_items] = {0}, // contadores de verificación: producidos
-   cont_cons[num_items] = {0}; // contadores de verificación: consumidos
+   cont_prod[NUM_ITEMS] = {0}, // contadores de verificación: producidos
+   cont_cons[NUM_ITEMS] = {0}; // contadores de verificación: consumidos
 
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
@@ -57,10 +57,10 @@ int producir_dato(  )
 
 void consumir_dato( unsigned valor_consumir )
 {
-   if ( num_items <= valor_consumir )
+   if ( NUM_ITEMS <= valor_consumir )
    {
-      cout << " valor a consumir === " << valor_consumir << ", num_items == " << num_items << endl ;
-      assert( valor_consumir < num_items );
+      cout << " valor a consumir === " << valor_consumir << ", num_items == " << NUM_ITEMS << endl ;
+      assert( valor_consumir < NUM_ITEMS );
    }
    cont_cons[valor_consumir] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<min_ms,max_ms>() ));
@@ -75,7 +75,7 @@ void test_contadores()
    bool ok = true ;
    cout << "comprobando contadores ...." << endl ;
 
-   for( unsigned i = 0 ; i < num_items ; i++ )
+   for( unsigned i = 0 ; i < NUM_ITEMS ; i++ )
    {
       if ( cont_prod[i] != 1 )
       {
@@ -173,7 +173,7 @@ void ProdConsSU1::escribir( int valor )
 
 void funcion_hebra_productora( MRef<ProdConsSU1> monitor )
 {
-   for( unsigned i = 0 ; i < num_items ; i++ )
+   for( unsigned i = 0 ; i < NUM_ITEMS ; i++ )
    {
       int valor = producir_dato(  ) ;
       monitor->escribir( valor );
@@ -183,7 +183,7 @@ void funcion_hebra_productora( MRef<ProdConsSU1> monitor )
 
 void funcion_hebra_consumidora( MRef<ProdConsSU1>  monitor )
 {
-   for( unsigned i = 0 ; i < num_items ; i++ )
+   for( unsigned i = 0 ; i < NUM_ITEMS ; i++ )
    {
       int valor = monitor->leer();
       consumir_dato( valor ) ;

@@ -13,15 +13,15 @@ using namespace scd ;
 // Variables globales
 
 const int
-   num_items = 40 ,   // número de items
+   NUM_ITEMS = 40 ,   // número de items
 	tam_vec   = 10 ,  // tamaño del buffer
-   n_prod = num_items / 5,
-   n_cons = num_items / 4,
-   prodpprod = num_items / n_prod,
-   prodpcons = num_items / n_cons;
+   n_prod = NUM_ITEMS / 5,
+   n_cons = NUM_ITEMS / 4,
+   prodpprod = NUM_ITEMS / n_prod,
+   prodpcons = NUM_ITEMS / n_cons;
 unsigned  
-   cont_prod[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
-   cont_cons[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
+   cont_prod[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
+   cont_cons[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
    siguiente_dato       = 0 ,  // siguiente dato a producir en 'producir_dato' (solo se usa ahí)
    ultimo_libre = 0,
    buffer[tam_vec] = {0},
@@ -49,7 +49,7 @@ unsigned producir_dato( int invocador)
 
 void consumir_dato(unsigned dato, int invocador)
 {
-   assert( dato < num_items );
+   assert( dato < NUM_ITEMS );
    cont_cons[dato] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,80>() ));
 
@@ -100,7 +100,7 @@ void test_contadores()
 {
    bool ok = true ;
    cout << "comprobando contadores ...." ;
-   for( unsigned i = 0 ; i < num_items ; i++ )
+   for( unsigned i = 0 ; i < NUM_ITEMS ; i++ )
    {  if ( cont_prod[i] != 1 )
       {  cout << "error: valor " << i << " producido " << cont_prod[i] << " veces." << endl ;
          ok = false ;
