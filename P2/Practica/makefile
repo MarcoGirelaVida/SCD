@@ -15,6 +15,8 @@ pcmf: prodcons_mu_fifo_exe
 
 fm: fumadores_mu_exe
 
+lem: lectores_escritores_mu_exe
+
 %_exe: %.cpp scd.cpp scd.h
 	$(compilador) $(opcionesc)  -o $@ $< scd.cpp
 
