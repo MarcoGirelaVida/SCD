@@ -32,6 +32,42 @@
  * Contiene el main del programa  
  * @ref main "main"  
  * 
+ * @section sec_salida 7. Ejemplo de salida
+ * -----------------------------------------------------------------
+ *   Problema de los fumadores con monitores.
+ *  ------------------------------------------------------------------
+ *  Estanquero : empieza a producir ingrediente (68 milisegundos)
+ *  Estanquero : termina de producir ingrediente 1
+ *          Puesto ingrediente: 1
+ *          Retirado ingrediente: 1
+ *  Estanquero : empieza a producir ingrediente (Fumador 16 milisegundos)
+ *  1  : empieza a fumar (212 milisegundos)
+ *  Estanquero : termina de producir ingrediente 2
+ *          Puesto ingrediente: 2
+ *          Retirado ingrediente: 2
+ *  Estanquero : empieza a producir ingrediente (48 milisegundos)
+ *  Fumador 2  : empieza a fumar (107 milisegundos)
+ *  Estanquero : termina de producir ingrediente 0
+ *          Puesto ingrediente: 0
+ *          Retirado ingrediente: 0
+ *  Fumador 0  : empieza a fumar (252 milisegundos)
+ *  Estanquero : empieza a producir ingrediente (56 milisegundos)
+ *  Estanquero : termina de producir ingrediente 0
+ *          Puesto ingrediente: 0
+ *  Estanquero : empieza a producir ingrediente (69 milisegundos)
+ *  Fumador 2  : termina de fumar, comienza espera de ingrediente 2
+ *  Estanquero : termina de producir ingrediente 2
+ *  Fumador 1  : termina de fumar, comienza espera de ingrediente 1
+ *  Fumador 0  : termina de fumar, comienza espera de ingrediente 0
+ *          Retirado ingrediente: 0
+ *          Puesto ingrediente: 2
+ *          Retirado ingrediente: 2
+ *  Fumador 2  : empieza a fumar (210 milisegundos)
+ *  Fumador 0  : empieza a fumar (235 milisegundos)
+ *  Estanquero : empieza a producir ingrediente (79 milisegundos)
+ *  Estanquero : termina de producir ingrediente 2
+ *          Puesto ingrediente: 2
+ * 
  * @author Marco Girela Vida
  * @date 11-11-2023
 */
