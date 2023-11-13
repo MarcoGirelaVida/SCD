@@ -14,21 +14,21 @@ using namespace scd ;
 
 const int
    NUM_ITEMS = 40 ,   // número de items
-	tam_vec   = 10 ,  // tamaño del buffer
-   n_prod = NUM_ITEMS / 5,
-   n_cons = NUM_ITEMS / 4,
-   prodpprod = NUM_ITEMS / n_prod,
-   prodpcons = NUM_ITEMS / n_cons;
+	TAM_VEC   = 10 ,  // tamaño del buffer
+   NUM_PROD = NUM_ITEMS / 5,
+   NUM_CONS = NUM_ITEMS / 4,
+   prodpprod = NUM_ITEMS / NUM_PROD,
+   prodpcons = NUM_ITEMS / NUM_CONS;
 unsigned  
    cont_prod[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
    cont_cons[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
    siguiente_dato       = 0 ,  // siguiente dato a producir en 'producir_dato' (solo se usa ahí)
    ultimo_libre = 0,
-   buffer[tam_vec] = {0},
-   producidos_por_productor[n_prod] = {0},
-   consumidos_por_consumidor[n_cons] = {0};
+   buffer[TAM_VEC] = {0},
+   producidos_por_productor[NUM_PROD] = {0},
+   consumidos_por_consumidor[NUM_CONS] = {0};
 
-Semaphore libres = tam_vec;
+Semaphore libres = TAM_VEC;
 Semaphore ocupadas = 0;
 Semaphore top_libre = 1;
 //**********************************************************************
@@ -74,21 +74,21 @@ void mostrar_buffer()
    cout << "    V" << endl;
 
    // Pintar ralla superior
-   for (int i = 0; i < tam_vec; i++)
+   for (int i = 0; i < TAM_VEC; i++)
    {
       cout << "_____";
    }
    cout << "_" << endl;
    
    // Pintar contenido del buffer
-   for (int i = 0; i < tam_vec; i++)
+   for (int i = 0; i < TAM_VEC; i++)
    {
       cout << "|" << setw(4) << buffer[i];
    }
    cout << "|" << endl;
 
    // Pintar ralla inferior
-   for (int i = 0; i < tam_vec; i++)
+   for (int i = 0; i < TAM_VEC; i++)
    {
       cout << "_____";
    }
@@ -111,7 +111,7 @@ void test_contadores()
       }
    }
 
-   for( int i = 0; i < n_prod; i++){
+   for( int i = 0; i < NUM_PROD; i++){
       if (producidos_por_productor[i] != prodpprod)
       {
          cout << "error: el productor " << i << " ha producido " << producidos_por_productor[i] << " en lugar de " << prodpprod << endl;
@@ -119,7 +119,7 @@ void test_contadores()
       } 
    }
 
-   for (int i = 0; i < n_cons; i++)
+   for (int i = 0; i < NUM_CONS; i++)
    {
       if (consumidos_por_consumidor[i] != prodpcons)
       {
@@ -174,23 +174,23 @@ int main()
         << "------------------------------------------------------------------" << endl
         << flush ;
 
-   thread hebras_consumidoras[n_cons];
-   thread hebras_productoras[n_prod];
+   thread hebras_consumidoras[NUM_CONS];
+   thread hebras_productoras[NUM_PROD];
 
-   for (int i = 0; i < n_prod; i++)
+   for (int i = 0; i < NUM_PROD; i++)
    {
       hebras_productoras[i] = thread(funcion_hebra_productora,i,prodpprod);
    }
-   for (int i = 0; i < n_cons; i++)
+   for (int i = 0; i < NUM_CONS; i++)
    {
       hebras_consumidoras[i] = thread(funcion_hebra_consumidora,i,prodpcons);
    }
 
-   for (int i = 0; i < n_prod; i++)
+   for (int i = 0; i < NUM_PROD; i++)
    {
       hebras_productoras[i].join();
    }
-   for (int i = 0; i < n_cons; i++)
+   for (int i = 0; i < NUM_CONS; i++)
    {
       hebras_consumidoras[i].join();
    }

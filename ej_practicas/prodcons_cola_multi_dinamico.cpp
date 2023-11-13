@@ -12,13 +12,12 @@ using namespace scd ;
 //**********************************************************************
 // Variables globales
 
-const int
+constexpr unsigned int
    NUM_ITEMS = 40 ,   // número de items
 	TAM_VEC   = 10 ,   // tamaño del buffer
    NUM_PROD = NUM_ITEMS / 5,
-   NUM_CONS = NUM_ITEMS / 4,
-   prodpprod = NUM_ITEMS / NUM_PROD,
-   prodpcons = NUM_ITEMS / NUM_CONS;
+   NUM_CONS = NUM_ITEMS / 4;
+
 unsigned  
    cont_prod[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
    cont_cons[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
@@ -29,10 +28,13 @@ unsigned
    producidos_por_productor[NUM_PROD] = {0},
    consumidos_por_consumidor[NUM_CONS] = {0};
 
+bool FINALIZA_CONSUMIDORES = false;
+
 Semaphore libres = TAM_VEC,
             ocupadas = 0,
             ultimo_ocupado_libre = 1,
-            primero_libre_libre = 1;
+            primero_libre_libre = 1,
+            espera_confirmacion = 1;
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
 //----------------------------------------------------------------------
@@ -42,8 +44,9 @@ unsigned producir_dato(int invocador)
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
    const unsigned dato_producido = siguiente_dato ;
    siguiente_dato++ ;
-   cont_prod[dato_producido] ++ ;
-   cout << "producido: " << dato_producido << endl << endl << flush;
+   cont_prod[dato_producido] ++;
+
+   cout << "Productor " << invocador << " produjo: " << dato_producido << endl << endl << flush;
    producidos_por_productor[invocador]++;
    return dato_producido ;
 }
@@ -54,12 +57,11 @@ void consumir_dato( unsigned dato, int invocador)
    assert( dato < NUM_ITEMS );
    cont_cons[dato] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
-
-   cout << "                  consumido: " << dato << endl ;
+   cout << "                  Consumidor " << invocador << " consumio: " << dato << endl ;
    consumidos_por_consumidor[invocador]++;
-
 }
 
+/*
 void mostrar_buffer()
 {
    // Pintar flecha de primero libre
@@ -108,6 +110,7 @@ void mostrar_buffer()
    cout << "   Ultimo ocupado" << endl;
 
 }
+*/
 //----------------------------------------------------------------------
 
 void test_contadores()
@@ -124,23 +127,6 @@ void test_contadores()
          ok = false ;
       }
    }
-
-   for( int i = 0; i < NUM_PROD; i++){
-      if (producidos_por_productor[i] != prodpprod)
-      {
-         cout << "error: el productor " << i << " ha producido " << producidos_por_productor[i] << " en lugar de " << prodpprod << endl;
-         ok = false;
-      } 
-   }
-
-   for (int i = 0; i < NUM_CONS; i++)
-   {
-      if (consumidos_por_consumidor[i] != prodpcons)
-      {
-         cout << "error: el consumidor " << i << " ha consumido " << consumidos_por_consumidor[i] << " en lugar de " << prodpcons << endl;
-         ok = false;
-      } 
-   }
    
    if (ok)
       cout << endl << flush << "solución (aparentemente) correcta." << endl << flush ;
@@ -148,36 +134,65 @@ void test_contadores()
 
 //----------------------------------------------------------------------
 
-void  funcion_hebra_productora(int num_hebra, int paso)
+void  funcion_hebra_productora(int num_hebra)
 {
-   for( unsigned i = paso*num_hebra ; i < paso*(num_hebra+1); i++ )
+   bool finaliza = false;
+
+   do
    {
-      int dato = producir_dato(num_hebra) ;
-      libres.sem_wait();
-      primero_libre_libre.sem_wait();
-      buffer[primero_libre] = dato;
-      primero_libre = (primero_libre + 1) % TAM_VEC;
-      primero_libre_libre.sem_signal();
-      ocupadas.sem_signal();
-      mostrar_buffer();
-   }
+      cout << "produce produce " << endl;
+      int dato = producir_dato(num_hebra);
+
+      finaliza = dato >= NUM_ITEMS;
+      
+      if (!finaliza)
+      {
+         libres.sem_wait();
+            primero_libre_libre.sem_wait();
+               buffer[primero_libre] = dato;
+               primero_libre = (primero_libre + 1) % TAM_VEC;
+            primero_libre_libre.sem_signal();
+         ocupadas.sem_signal();
+      }
+      cout << "/produce produce " << endl;
+   } while (!finaliza);
+   cout << "hey hey produce" << endl;
 }
 
 //----------------------------------------------------------------------
 
-void funcion_hebra_consumidora(int num_hebra, int paso)
-{
-   for( unsigned i = paso*num_hebra ; i < paso*(num_hebra+1) ; i++ )
+void funcion_hebra_consumidora(int num_hebra)
+{  
+   while (!FINALIZA_CONSUMIDORES)
    {
-      int dato ;
-      ocupadas.sem_wait();
-      ultimo_ocupado_libre.sem_wait();
-      dato = buffer[ultimo_ocupado];
-      ultimo_ocupado = (ultimo_ocupado + 1) % TAM_VEC;
-      ultimo_ocupado_libre.sem_signal();
-      libres.sem_signal();
-      consumir_dato( dato, num_hebra) ;
-    }
+      cout << "consume consume" << endl;
+      int dato;
+
+      cout << "consume consume 4" << endl;
+      espera_confirmacion.sem_wait();
+      if (!FINALIZA_CONSUMIDORES)
+      {
+         cout << "consume consume 2" << endl;
+         ocupadas.sem_wait();
+         cout << "conume consume 3" << endl;
+            ultimo_ocupado_libre.sem_wait();
+
+               dato = buffer[ultimo_ocupado];
+               FINALIZA_CONSUMIDORES = !(dato < NUM_ITEMS);
+               espera_confirmacion.sem_signal();
+               ultimo_ocupado = (ultimo_ocupado + 1) % TAM_VEC;
+
+            ultimo_ocupado_libre.sem_signal();
+             cout << "/conume consume 3" << endl;
+         libres.sem_signal();
+         cout << "/conume consume 2" << endl;
+
+         if (!FINALIZA_CONSUMIDORES) consumir_dato( dato, num_hebra);
+         cout << "/consume consume" << endl;
+      }
+      
+   }
+   cout << "hey hey consume " << endl;
 }
 //----------------------------------------------------------------------
 
@@ -193,11 +208,11 @@ int main()
 
    for (int i = 0; i < NUM_PROD; i++)
    {
-      hebras_productoras[i] = thread(funcion_hebra_productora,i,prodpprod);
+      hebras_productoras[i] = thread(funcion_hebra_productora,i);
    }
    for (int i = 0; i < NUM_CONS; i++)
    {
-      hebras_consumidoras[i] = thread(funcion_hebra_consumidora,i,prodpcons);
+      hebras_consumidoras[i] = thread(funcion_hebra_consumidora,i);
    }
 
    for (int i = 0; i < NUM_PROD; i++)
@@ -209,5 +224,24 @@ int main()
       hebras_consumidoras[i].join();
    }
 
+
    test_contadores();
+
+   unsigned int total_producido = 0;
+   unsigned int total_consumido = 0;
+   for (size_t i = 0; i < NUM_PROD; i++)
+   {
+      total_producido += producidos_por_productor[i];
+      cout << "Productor: " << i << " ha producido: " << producidos_por_productor[i] << " elementos." << endl;
+   }
+
+   for (size_t i = 0; i < NUM_CONS; i++)
+   {
+      total_consumido += consumidos_por_consumidor[i];
+      cout << "Consumidor: " << i << " ha consumido: " << consumidos_por_consumidor[i] << " elementos." << endl;
+   }
+   
+   cout << "Se han producido: " << total_producido << " items." << endl;
+   cout << "Se han consumido: " << total_consumido << " items." << endl;
+   cout << "En total deberían ser: " << NUM_ITEMS << " elementos." << endl;
 }
