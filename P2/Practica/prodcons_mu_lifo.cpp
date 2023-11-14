@@ -25,28 +25,65 @@
 using namespace std ;
 using namespace scd ;
 
-constexpr int
-   NUM_ITEMS = 2000000 ,   // número de items a producir/consumir
-   NUM_HEBRAS = 2000;
+/**
+ * @var NUM_ITEMS
+ * @brief Número de items a producir/consumir.
+ */
+constexpr int NUM_ITEMS = 2000000;
 
-int
-   siguiente_dato = 0 ; // siguiente valor a devolver en 'producir_dato'
-   
-constexpr int               
-   min_ms    = 5,     // tiempo minimo de espera en sleep_for
-   max_ms    = 20 ;   // tiempo máximo de espera en sleep_for
+/**
+ * @var NUM_HEBRAS
+ * @brief Número de hebras a utilizar.
+ */
+constexpr int NUM_HEBRAS = 2000;
 
+/**
+ * @var siguiente_dato
+ * @brief Siguiente valor a devolver en 'producir_dato'.
+ */
+int siguiente_dato = 0;
 
-mutex
-   mtx ;                 // mutex de escritura en pantalla
-unsigned
-   cont_prod[NUM_ITEMS] = {0}, // contadores de verificación: producidos
-   cont_cons[NUM_ITEMS] = {0}; // contadores de verificación: consumidos
+/**
+ * @var min_ms
+ * @brief Tiempo mínimo de espera en sleep_for.
+ */
+constexpr int min_ms = 5;
+
+/**
+ * @var max_ms
+ * @brief Tiempo máximo de espera en sleep_for.
+ */
+constexpr int max_ms = 20;
+
+/**
+ * @var mtx
+ * @brief Mutex para la escritura en pantalla.
+ */
+mutex mtx;
+
+/**
+ * @var cont_prod
+ * @brief Contadores de verificación para los datos producidos.
+ */
+unsigned cont_prod[NUM_ITEMS] = {0};
+
+/**
+ * @var cont_cons
+ * @brief Contadores de verificación para los datos consumidos.
+ */
+unsigned cont_cons[NUM_ITEMS] = {0};
 
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
 //----------------------------------------------------------------------
-
+/**
+ * @brief Función que produce un dato.
+ *
+ * Esta función genera un dato para ser consumido posteriormente.
+ * El dato producido es simplemente un contador que se incrementa después de cada producción.
+ *
+ * @return El dato producido.
+ */
 int producir_dato(  )
 {
    // Se ha modificado la posición del mutex para garantizar la exclusión mutua sobre todas las
@@ -63,7 +100,13 @@ int producir_dato(  )
    return valor_producido ;
 }
 //----------------------------------------------------------------------
-
+/**
+ * @brief Función que consume un dato.
+ *
+ * Esta función consume un dato. Verifica que el dato a consumir sea válido y luego lo consume.
+ *
+ * @param valor_consumir El valor a consumir.
+ */
 void consumir_dato( unsigned valor_consumir )
 {
    if ( NUM_ITEMS <= valor_consumir )
@@ -78,7 +121,11 @@ void consumir_dato( unsigned valor_consumir )
    mtx.unlock();
 }
 //----------------------------------------------------------------------
-
+/**
+ * @brief Función que verifica los contadores de producción y consumo.
+ *
+ * Esta función verifica que cada dato producido haya sido consumido exactamente una vez.
+ */
 void test_contadores()
 {
    bool ok = true ;
@@ -102,8 +149,12 @@ void test_contadores()
 }
 
 // *****************************************************************************
-// clase para monitor buffer, version FIFO, semántica SC, multiples prod/cons
-
+/**
+ * @brief Clase que implementa un monitor para el problema del productor/consumidor.
+ *
+ * Esta clase implementa un monitor que proporciona una solución al problema del productor/consumidor.
+ * El monitor utiliza semántica de señalización urgente (SU) y permite múltiples productores y consumidores.
+ */
 class ProdConsSU1 : public HoareMonitor
 {
  private:
@@ -171,8 +222,15 @@ void ProdConsSU1::escribir( int valor )
    ocupadas.signal();
 }
 // *****************************************************************************
-// funciones de hebras
-
+/**
+ * @brief Función que ejecuta la hebra productora.
+ *
+ * Esta función es ejecutada por cada hebra productora. Produce una cantidad de números
+ * y los escribe en el monitor.
+ *
+ * @param cantidad_numeros_a_producir Cantidad de números que la hebra productora debe producir.
+ * @param monitor Monitor en el que la hebra productora debe escribir los números.
+ */
 void funcion_hebra_productora(const unsigned int cantidad_numeros_a_producir, MRef<ProdConsSU1> monitor )
 {
    for( size_t i = 0 ; i < cantidad_numeros_a_producir; i++ )
@@ -182,7 +240,15 @@ void funcion_hebra_productora(const unsigned int cantidad_numeros_a_producir, MR
    }
 }
 // -----------------------------------------------------------------------------
-
+/**
+ * @brief Función que ejecuta la hebra consumidora.
+ *
+ * Esta función es ejecutada por cada hebra consumidora. Consume una cantidad de números
+ * del monitor.
+ *
+ * @param cantidad_numeros_a_producir Cantidad de números que la hebra consumidora debe consumir.
+ * @param monitor Monitor del que la hebra consumidora debe leer los números.
+ */
 void funcion_hebra_consumidora(const unsigned int cantidad_numeros_a_producir, MRef<ProdConsSU1>  monitor )
 {
    for( size_t i = 0 ; i < cantidad_numeros_a_producir ; i++ )
@@ -192,6 +258,13 @@ void funcion_hebra_consumidora(const unsigned int cantidad_numeros_a_producir, M
    }
 }
 // -----------------------------------------------------------------------------
+/**
+ * @brief Función principal.
+ *
+ * Esta función crea un monitor y varias hebras productoras y consumidoras.
+ * Las hebras producen y consumen datos utilizando el monitor.
+ * Finalmente, la función verifica que todos los datos producidos hayan sido consumidos.
+ */
 
 int main()
 {

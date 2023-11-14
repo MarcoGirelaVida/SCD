@@ -16,11 +16,11 @@ const unsigned
    num_items = 40 ,   // número de items
 	tam_vec   = 10 ;   // tamaño del buffer
 unsigned  
-   cont_prod[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
-   cont_cons[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
+   contador_producidos[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
+   contador_consumidos[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
    siguiente_dato       = 0 ,  // siguiente dato a producir en 'producir_dato' (solo se usa ahí)
    primero_libre = 0 ,
-   ultimo_ocupado = 0 ,
+   primera_ocupada = 0 ,
    buffer[tam_vec] = {0};
 
 Semaphore libres = tam_vec;
@@ -34,7 +34,7 @@ unsigned producir_dato()
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
    const unsigned dato_producido = siguiente_dato ;
    siguiente_dato++ ;
-   cont_prod[dato_producido] ++ ;
+   contador_producidos[dato_producido] ++ ;
    cout << "producido: " << dato_producido << endl << endl << flush;
    return dato_producido ;
 }
@@ -43,7 +43,7 @@ unsigned producir_dato()
 void consumir_dato( unsigned dato )
 {
    assert( dato < num_items );
-   cont_cons[dato] ++ ;
+   contador_consumidos[dato] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
 
    cout << "                  consumido: " << dato << endl ;
@@ -80,7 +80,7 @@ void mostrar_buffer()
    }
    cout << "_" << endl;
    
-   for (int i = 1; i < ultimo_ocupado; i++)
+   for (int i = 1; i < primera_ocupada; i++)
    {
       cout << "     ";
    }
@@ -94,12 +94,12 @@ void test_contadores()
    bool ok = true ;
    cout << "comprobando contadores ...." ;
    for( unsigned i = 0 ; i < num_items ; i++ )
-   {  if ( cont_prod[i] != 1 )
-      {  cout << "error: valor " << i << " producido " << cont_prod[i] << " veces." << endl ;
+   {  if ( contador_producidos[i] != 1 )
+      {  cout << "error: valor " << i << " producido " << contador_producidos[i] << " veces." << endl ;
          ok = false ;
       }
-      if ( cont_cons[i] != 1 )
-      {  cout << "error: valor " << i << " consumido " << cont_cons[i] << " veces" << endl ;
+      if ( contador_consumidos[i] != 1 )
+      {  cout << "error: valor " << i << " consumido " << contador_consumidos[i] << " veces" << endl ;
          ok = false ;
       }
    }
@@ -130,8 +130,8 @@ void funcion_hebra_consumidora(  )
    {
       int dato ;
       ocupadas.sem_wait();
-      dato = buffer[ultimo_ocupado];
-      ultimo_ocupado = (ultimo_ocupado + 1) % tam_vec;
+      dato = buffer[primera_ocupada];
+      primera_ocupada = (primera_ocupada + 1) % tam_vec;
       libres.sem_signal();
       consumir_dato( dato ) ;
     }

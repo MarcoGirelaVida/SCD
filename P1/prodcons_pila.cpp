@@ -16,8 +16,8 @@ const unsigned
    num_items = 40 ,   // número de items
 	tam_vec   = 10 ;   // tamaño del buffer
 unsigned  
-   cont_prod[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
-   cont_cons[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
+   contador_producidos[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
+   contador_consumidos[num_items] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
    siguiente_dato       = 0 ,  // siguiente dato a producir en 'producir_dato' (solo se usa ahí)
    primero_libre = 0,
    buffer[tam_vec] = {0};
@@ -34,7 +34,7 @@ unsigned producir_dato()
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
    const unsigned dato_producido = siguiente_dato ;
    siguiente_dato++ ;
-   cont_prod[dato_producido] ++ ;
+   contador_producidos[dato_producido] ++ ;
    cout << "producido: " << dato_producido << endl << endl << flush;
    return dato_producido ;
 }
@@ -43,7 +43,7 @@ unsigned producir_dato()
 void consumir_dato( unsigned dato )
 {
    assert( dato < num_items );
-   cont_cons[dato] ++ ;
+   contador_consumidos[dato] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
 
    cout << "                  consumido: " << dato << endl ;
@@ -93,12 +93,12 @@ void test_contadores()
    bool ok = true ;
    cout << "comprobando contadores ...." ;
    for( unsigned i = 0 ; i < num_items ; i++ )
-   {  if ( cont_prod[i] != 1 )
-      {  cout << "error: valor " << i << " producido " << cont_prod[i] << " veces." << endl ;
+   {  if ( contador_producidos[i] != 1 )
+      {  cout << "error: valor " << i << " producido " << contador_producidos[i] << " veces." << endl ;
          ok = false ;
       }
-      if ( cont_cons[i] != 1 )
-      {  cout << "error: valor " << i << " consumido " << cont_cons[i] << " veces" << endl ;
+      if ( contador_consumidos[i] != 1 )
+      {  cout << "error: valor " << i << " consumido " << contador_consumidos[i] << " veces" << endl ;
          ok = false ;
       }
    }

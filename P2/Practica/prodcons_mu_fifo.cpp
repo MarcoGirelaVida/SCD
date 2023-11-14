@@ -1,15 +1,13 @@
-// -----------------------------------------------------------------------------
-//
-// Sistemas concurrentes y Distribuidos.
-// Seminario 2. Introducción a los monitores en C++11.
-//
-// Archivo: prodcons1_su_fifo.cpp
-//
-// Ejemplo de un monitor en C++11 con semántica SU, para el problema
-// del productor/consumidor, con productor y consumidor únicos.
-// Opcion FIFO
-// -----------------------------------------------------------------------------------
-
+/**
+ * @file prodcons_mu_fifo.cpp
+ * @brief Solución al problema del productor-consumidor utilizando la estrategia FIFO.
+ *
+ * Este archivo contiene la implementación de un monitor en C++11 con semántica SU,
+ * para el problema del productor/consumidor, con un único productor y consumidor. Opción FIFO.
+ *
+ * @author Marco Girela Vida
+ * @date 11-11-2023
+ */
 
 #include <iostream>
 #include <iomanip>
@@ -21,29 +19,61 @@
 using namespace std ;
 using namespace scd ;
 
-constexpr int
-   NUM_ITEMS = 2000000,   // número de items a producir/consumir
-   NUM_HEBRAS_PROD = 2000,
-   NUM_HEBRAS_CONS = 2000;
-int
-   siguiente_dato = 0 ; // siguiente valor a devolver en 'producir_dato'
-   
-constexpr int               
-   min_ms    = 5,     // tiempo minimo de espera en sleep_for
-   max_ms    = 20 ;   // tiempo máximo de espera en sleep_for
+/**
+ * @brief Número de elementos a producir/consumir.
+ */
+constexpr int NUM_ITEMS = 2000000;
 
+/**
+ * @brief Número de hilos productores.
+ */
+constexpr int NUM_HEBRAS_PROD = 2000;
 
-mutex
-   mtx ;                 // mutex de escritura en pantalla
-unsigned
-   cont_prod[NUM_ITEMS] = {0}, // contadores de verificación: producidos
-   cont_cons[NUM_ITEMS] = {0}; // contadores de verificación: consumidos
+/**
+ * @brief Número de hilos consumidores.
+ */
+constexpr int NUM_HEBRAS_CONS = 2000;
+
+/**
+ * @brief Siguiente valor a devolver en 'producir_dato'.
+ */
+int siguiente_dato = 0 ;
+
+/**
+ * @brief Tiempo mínimo de espera en sleep_for.
+ */
+constexpr int min_ms = 5;
+
+/**
+ * @brief Tiempo máximo de espera en sleep_for.
+ */
+constexpr int max_ms = 20;
+
+/**
+ * @brief Mutex para la escritura en pantalla.
+ */
+mutex mtx;
+
+/**
+ * @brief Contadores de verificación para los elementos producidos.
+ */
+unsigned cont_prod[NUM_ITEMS] = {0};
+
+/**
+ * @brief Contadores de verificación para los elementos consumidos.
+ */
+unsigned cont_cons[NUM_ITEMS] = {0};
 
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
 //----------------------------------------------------------------------
 
-int producir_dato(  )
+/**
+ * @brief Función para producir datos.
+ *
+ * @return El dato producido.
+ */
+int producir_dato()
 {
    
    this_thread::sleep_for( chrono::milliseconds( aleatorio<min_ms,max_ms>() ));
@@ -55,8 +85,13 @@ int producir_dato(  )
    cont_prod[valor_producido]++ ;
    return valor_producido ;
 }
-//----------------------------------------------------------------------
 
+//----------------------------------------------------------------------
+/**
+ * @brief Función para consumir datos.
+ *
+ * @param dato Dato que se va a consumir.
+ */
 void consumir_dato( unsigned valor_consumir )
 {
    if ( NUM_ITEMS <= valor_consumir )
@@ -71,7 +106,9 @@ void consumir_dato( unsigned valor_consumir )
    mtx.unlock();
 }
 //----------------------------------------------------------------------
-
+/**
+ * @brief Función para comprobar si se han producido y consumido todos los datos.
+ */
 void test_contadores()
 {
    bool ok = true ;
@@ -93,10 +130,14 @@ void test_contadores()
    if (ok)
       cout << endl << flush << "solución (aparentemente) correcta." << endl << flush ;
 }
-
-// *****************************************************************************
-// clase para monitor buffer, version FIFO, semántica SC, multiples prod/cons
-
+/**
+ * @class ProdConsSU1
+ * @brief Clase para monitor buffer, versión FIFO, semántica SC, múltiples productores/consumidores.
+ *
+ * Esta clase implementa un monitor que gestiona un buffer de elementos. 
+ * Los elementos son producidos por múltiples productores y consumidos por múltiples consumidores.
+ * La estrategia de gestión del buffer es FIFO (First In, First Out), y la semántica es SC.
+ */
 class ProdConsSU1 : public HoareMonitor
 {
  private:
@@ -170,9 +211,17 @@ void ProdConsSU1::escribir( int valor )
    // señalar al consumidor que ya hay una celda ocupada (por si esta esperando)
    lectores.signal();
 }
-// *****************************************************************************
-// funciones de hebras
 
+// -----------------------------------------------------------------------------
+/**
+ * @brief Función que ejecuta la hebra productora.
+ *
+ * Esta función es ejecutada por cada hebra productora. Produce una cantidad de números
+ * y los escribe en el monitor.
+ *
+ * @param cantidad_numeros_a_producir Cantidad de números que la hebra productora debe producir.
+ * @param monitor Monitor en el que la hebra productora debe escribir los números.
+ */
 void funcion_hebra_productora(const unsigned int cantidad_numeros_a_producir, MRef<ProdConsSU1> monitor )
 {
    for( unsigned i = 0 ; i < cantidad_numeros_a_producir; i++ )
@@ -181,8 +230,16 @@ void funcion_hebra_productora(const unsigned int cantidad_numeros_a_producir, MR
       monitor->escribir( valor );
    }
 }
-// -----------------------------------------------------------------------------
 
+/**
+ * @brief Función que ejecuta la hebra consumidora.
+ *
+ * Esta función es ejecutada por cada hebra consumidora. Consume una cantidad de números
+ * del monitor.
+ *
+ * @param cantidad_numeros_a_producir Cantidad de números que la hebra consumidora debe consumir.
+ * @param monitor Monitor del que la hebra consumidora debe leer los números.
+ */
 void funcion_hebra_consumidora(const unsigned int cantidad_numeros_a_producir, MRef<ProdConsSU1>  monitor )
 {
    for( unsigned i = 0 ; i < cantidad_numeros_a_producir; i++ )

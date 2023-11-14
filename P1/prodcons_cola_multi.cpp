@@ -20,19 +20,19 @@ const int
    prodpprod = NUM_ITEMS / NUM_PROD,
    prodpcons = NUM_ITEMS / NUM_CONS;
 unsigned  
-   cont_prod[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
-   cont_cons[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
+   contador_producidos[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
+   contador_consumidos[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
    siguiente_dato       = 0 ,  // siguiente dato a producir en 'producir_dato' (solo se usa ahí)
    primero_libre = 0 ,
-   ultimo_ocupado = 0 ,
+   primera_ocupada = 0 ,
    buffer[TAM_VEC] = {0},
    producidos_por_productor[NUM_PROD] = {0},
    consumidos_por_consumidor[NUM_CONS] = {0};
 
 Semaphore libres = TAM_VEC,
             ocupadas = 0,
-            ultimo_ocupado_libre = 1,
-            primero_libre_libre = 1;
+            primera_ocupada_en_uso = 1,
+            primera_libre_en_uso = 1;
 //**********************************************************************
 // funciones comunes a las dos soluciones (fifo y lifo)
 //----------------------------------------------------------------------
@@ -42,7 +42,7 @@ unsigned producir_dato(int invocador)
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
    const unsigned dato_producido = siguiente_dato ;
    siguiente_dato++ ;
-   cont_prod[dato_producido] ++ ;
+   contador_producidos[dato_producido] ++ ;
    cout << "producido: " << dato_producido << endl << endl << flush;
    producidos_por_productor[invocador]++;
    return dato_producido ;
@@ -52,7 +52,7 @@ unsigned producir_dato(int invocador)
 void consumir_dato( unsigned dato, int invocador)
 {
    assert( dato < NUM_ITEMS );
-   cont_cons[dato] ++ ;
+   contador_consumidos[dato] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<20,100>() ));
 
    cout << "                  consumido: " << dato << endl ;
@@ -96,12 +96,12 @@ void mostrar_buffer()
    }
    cout << "_" << endl;
 
-   for (int i = 1; i < ultimo_ocupado; i++)
+   for (int i = 1; i < primera_ocupada; i++)
    {
       cout << "     ";
    }
    cout << "    A" << endl;
-   for (int i = 1; i < ultimo_ocupado; i++)
+   for (int i = 1; i < primera_ocupada; i++)
    {
       cout << "     ";
    }
@@ -115,12 +115,12 @@ void test_contadores()
    bool ok = true ;
    cout << "comprobando contadores ...." ;
    for( unsigned i = 0 ; i < NUM_ITEMS ; i++ )
-   {  if ( cont_prod[i] != 1 )
-      {  cout << "error: valor " << i << " producido " << cont_prod[i] << " veces." << endl ;
+   {  if ( contador_producidos[i] != 1 )
+      {  cout << "error: valor " << i << " producido " << contador_producidos[i] << " veces." << endl ;
          ok = false ;
       }
-      if ( cont_cons[i] != 1 )
-      {  cout << "error: valor " << i << " consumido " << cont_cons[i] << " veces" << endl ;
+      if ( contador_consumidos[i] != 1 )
+      {  cout << "error: valor " << i << " consumido " << contador_consumidos[i] << " veces" << endl ;
          ok = false ;
       }
    }
@@ -154,10 +154,10 @@ void  funcion_hebra_productora(int num_hebra, int paso)
    {
       int dato = producir_dato(num_hebra) ;
       libres.sem_wait();
-      primero_libre_libre.sem_wait();
+      primera_libre_en_uso.sem_wait();
       buffer[primero_libre] = dato;
       primero_libre = (primero_libre + 1) % TAM_VEC;
-      primero_libre_libre.sem_signal();
+      primera_libre_en_uso.sem_signal();
       ocupadas.sem_signal();
       mostrar_buffer();
    }
@@ -171,10 +171,10 @@ void funcion_hebra_consumidora(int num_hebra, int paso)
    {
       int dato ;
       ocupadas.sem_wait();
-      ultimo_ocupado_libre.sem_wait();
-      dato = buffer[ultimo_ocupado];
-      ultimo_ocupado = (ultimo_ocupado + 1) % TAM_VEC;
-      ultimo_ocupado_libre.sem_signal();
+      primera_ocupada_en_uso.sem_wait();
+      dato = buffer[primera_ocupada];
+      primera_ocupada = (primera_ocupada + 1) % TAM_VEC;
+      primera_ocupada_en_uso.sem_signal();
       libres.sem_signal();
       consumir_dato( dato, num_hebra) ;
     }
