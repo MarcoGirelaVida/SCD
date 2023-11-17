@@ -89,13 +89,18 @@ using namespace scd;
  * @brief Número de fumadores disponibles
  * @pre 0 <= NUM_FUMADORES
 */
-constexpr unsigned short int NUM_FUMADORES = 3;
 
+constexpr unsigned NUM_CIGARROS = 100;
+constexpr unsigned short int NUM_FUMADORES = 5;
+constexpr unsigned short int NUM_ESTANQUEROS = 5;
+constexpr unsigned short int NUM_INGREDIENTES = NUM_FUMADORES;
+constexpr unsigned CIGARROS_POR_FUMADOR = NUM_CIGARROS / NUM_FUMADORES;
 /**
  * @brief Vector que almacena el número de cigarros fumados por cada fumador
  * Se usa en @ref test_fumadores "test_fumadores" para comprobar que el programa se ha ejecutado correctamente
 */
-unsigned int cigarros_fumados_por_cada_fumador[NUM_FUMADORES] = {0};
+unsigned cigarros_fumados_por_cada_fumador[NUM_FUMADORES] = {0};
+//unsigned ingredientes_fabricados_por_cada_estanquero[NUM_ESTANQUEROS][NUM_INGREDIENTES] = {0};
 
 /**
  * @brief Vector que almacena el número de cada ingrediente que ha fabricado el estanquero
@@ -109,7 +114,7 @@ unsigned int cantidad_fabricada_de_cada_ingrediente[NUM_FUMADORES] = {0};
  * @param num_fumador Número del fumador que va a fumar
  * @note Sería mejor si no se hiciesen couts, el parámetro no sería necesario. Pero bueno
 */
-void fumar(const unsigned short int num_fumador)
+void fumar(const unsigned short num_fumador)
 {
     // calcular milisegundos aleatorios de duración de la acción de fumar)
     chrono::milliseconds duracion_fumar( aleatorio<100,300>() );
@@ -130,21 +135,21 @@ void fumar(const unsigned short int num_fumador)
  * @brief Fabrica un ingrediente aleatorio del cigarro
  * @return Número del ingrediente fabricado
 */
-const unsigned short int fabricar_ingrediente()
+const unsigned short fabricar_ingrediente(const unsigned short num_hebra_invocadora)
 {
     // calcular milisegundos aleatorios de duración de la acción de fumar)
     chrono::milliseconds duracion_produ( aleatorio<10,90>() );
 
     // informa de que comienza a producir
-    cout << "Estanquero : empieza a producir ingrediente (" << duracion_produ.count() << " milisegundos)" << endl;
+    cout << "Estanquero " << num_hebra_invocadora << ": empieza a producir ingrediente (" << duracion_produ.count() << " milisegundos)" << endl;
 
     // espera bloqueada un tiempo igual a ''duracion_produ' milisegundos
     this_thread::sleep_for( duracion_produ );
 
-    const int num_ingrediente = aleatorio<0,NUM_FUMADORES-1>() ;
+    const unsigned short num_ingrediente = aleatorio<0,NUM_INGREDIENTES-1>() ;
 
     // informa de que ha terminado de producir
-    cout << "Estanquero : termina de producir ingrediente " << num_ingrediente << endl;
+    cout << "Estanquero " << num_hebra_invocadora << ": termina de producir ingrediente " << num_ingrediente << endl;
 
     return num_ingrediente ;
 }
@@ -226,6 +231,7 @@ void Mostrador::ofrecer_ingrediente(const unsigned short int ingrediente)
     while (ingrediente_en_mostrador != -1)
         esperando_mostrador_libre.wait();
 
+    cantidad_fabricada_de_cada_ingrediente[ingrediente]++;
     ingrediente_en_mostrador = ingrediente;
     cout << "           Puesto ingrediente: " << ingrediente << endl;
     esperando_ingrediente.signal();
@@ -240,11 +246,12 @@ void Mostrador::ofrecer_ingrediente(const unsigned short int ingrediente)
 */
 void funcion_hebra_fumador(MRef<Mostrador> mostrador, const unsigned short int num_fumador)
 {
-    while (true)
+    while (cigarros_fumados_por_cada_fumador[num_fumador] < CIGARROS_POR_FUMADOR)
     {
         mostrador->recoger_ingrediente(num_fumador);
         fumar(num_fumador);  
     }
+    cout << "           FUMADOR " << num_fumador << " TERMINÓ" << endl;
 }
 
 /**
@@ -252,13 +259,32 @@ void funcion_hebra_fumador(MRef<Mostrador> mostrador, const unsigned short int n
  * Esta incluye @ref fabricar_ingrediente "fabricar_ingrediente" (Concurrente) y @ref Mostrador::ofrecer_ingrediente "ofrecer_ingrediente" (Exclusión Mutua)
  * @param mostrador referencia al mostrador del estanco donde el estanquero está ofreciendo los ingredientes
 */
-void funcion_hebra_estanquero(MRef<Mostrador> mostrador)
+void funcion_hebra_estanquero(MRef<Mostrador> mostrador, const unsigned short num_estanquero)
 {
-    while (true)
+    bool todos_fumadores_han_terminado = false;
+
+    while (todos_fumadores_han_terminado == false)
     {
-        const unsigned short int ingrediente_fabricado = fabricar_ingrediente();
-        cantidad_fabricada_de_cada_ingrediente[ingrediente_fabricado]++;
-        mostrador->ofrecer_ingrediente(ingrediente_fabricado);
+        unsigned short ingrediente_fabricado;
+        bool ingrediente_necesitado = true;
+        size_t iterador = 0;
+
+        do
+        {
+            ingrediente_fabricado = fabricar_ingrediente(num_estanquero);
+            ingrediente_necesitado = cantidad_fabricada_de_cada_ingrediente[ingrediente_fabricado] < CIGARROS_POR_FUMADOR;
+            
+            if (iterador > 0)
+                cout << "SIGUIENTE INGREDIENTE " << " Ingrediente: " << ingrediente_fabricado << " Estanquero: " << num_estanquero << " It: " << iterador <<  endl;
+
+            iterador++;
+
+        } while (ingrediente_necesitado == false && iterador < NUM_FUMADORES);
+        
+        todos_fumadores_han_terminado = iterador >= NUM_FUMADORES;
+
+        if (todos_fumadores_han_terminado == false)  
+            mostrador->ofrecer_ingrediente(ingrediente_fabricado);
     }
 }
 
@@ -302,15 +328,24 @@ int main()
 
     //---------------------------//
 
-    thread hebra_estanquero = thread (funcion_hebra_estanquero, mostrador);
+    thread hebras_estanqueros[NUM_ESTANQUEROS];
     thread hebras_fumadores[NUM_FUMADORES];
+    
+    for (size_t i = 0; i < NUM_ESTANQUEROS; i++)
+    {
+        hebras_estanqueros[i] = thread(funcion_hebra_estanquero, mostrador, i);
+    }
     
     for (size_t i = 0; i < NUM_FUMADORES; i++)
         hebras_fumadores[i] = thread(funcion_hebra_fumador, mostrador, i);
 
     //---------------------------//
 
-    hebra_estanquero.join();
+    for (size_t i = 0; i < NUM_ESTANQUEROS; i++)
+    {
+        hebras_estanqueros[i].join();
+    }
+    
 
     for (size_t i = 0; i < NUM_FUMADORES; i++)
         hebras_fumadores[i].join();
@@ -318,7 +353,7 @@ int main()
 
     //---------------------------//
 
-    //test_fumadores();
+    test_fumadores();
 
     return 0;
 }

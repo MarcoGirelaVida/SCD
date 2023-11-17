@@ -22,18 +22,20 @@ using namespace scd ;
 /**
  * @brief Número de elementos a producir/consumir.
  */
-constexpr int NUM_ITEMS = 2000000;
+constexpr int NUM_ITEMS = 20000;
 
 /**
  * @brief Número de hilos productores.
  */
-constexpr int NUM_HEBRAS_PROD = 2000;
+constexpr int NUM_PROD = 2000;
 
 /**
  * @brief Número de hilos consumidores.
  */
-constexpr int NUM_HEBRAS_CONS = 2000;
+constexpr int NUM_CONS = 2000;
 
+const unsigned int CANTIDAD_DATOS_A_PRODUCIR = NUM_ITEMS/NUM_PROD;
+const unsigned int CANTIDAD_DATOS_A_CONSUMIR = NUM_ITEMS/NUM_CONS;
 /**
  * @brief Siguiente valor a devolver en 'producir_dato'.
  */
@@ -82,6 +84,7 @@ int producir_dato()
    siguiente_dato ++ ;
    cout << "hebra productora, produce " << valor_producido << endl << flush ;
    mtx.unlock();
+   
    cont_prod[valor_producido]++ ;
    return valor_producido ;
 }
@@ -154,7 +157,7 @@ class ProdConsSU1 : public HoareMonitor
    escritores ;                 //  cola donde espera el productor  (n<num_celdas_total)
 
  public:                    // constructor y métodos públicos
-   ProdConsSU1() ;             // constructor
+   ProdConsSU1();             // constructor
    int  leer();                // extraer un valor (sentencia L) (consumidor)
    void escribir(int valor); // insertar un valor (sentencia E) (productor)
 } ;
@@ -259,47 +262,24 @@ int main()
 
    // Declaraciones
    MRef<ProdConsSU1> monitor = Create<ProdConsSU1>() ;
-   thread hebras_productoras[NUM_HEBRAS_PROD];
-   thread hebras_consumidoras[NUM_HEBRAS_CONS];
+   thread hebras_productoras[NUM_PROD];
+   thread hebras_consumidoras[NUM_CONS];
+
+   for (int i = 0; i < NUM_PROD; i++){
+       hebras_productoras[i] = thread(funcion_hebra_productora, CANTIDAD_DATOS_A_PRODUCIR, monitor);
+   }
    
-   const unsigned int cantidad_de_ejecuciones_por_hebra_prod = NUM_ITEMS / NUM_HEBRAS_PROD;
-   // Lógica para los casos en los que el número de items no es una división entera con numero de hebras
-   bool items_son_divisibles_entre_hebras_prod = (NUM_ITEMS % NUM_HEBRAS_PROD) == 0;
-   const unsigned int num_hebras_con_cantidad_ejecuciones_normal_prod = items_son_divisibles_entre_hebras_prod ? NUM_HEBRAS_PROD : (NUM_HEBRAS_PROD - 1);
-
-   const unsigned int cantidad_de_ejecuciones_por_hebra_cons = NUM_ITEMS / NUM_HEBRAS_CONS;
-   // Lógica para los casos en los que el número de items no es una división entera con numero de hebras
-   bool items_son_divisibles_entre_hebras_cons = (NUM_ITEMS % NUM_HEBRAS_CONS) == 0;
-   const unsigned int num_hebras_con_cantidad_ejecuciones_normal_cons = items_son_divisibles_entre_hebras_cons ? NUM_HEBRAS_CONS : (NUM_HEBRAS_CONS - 1);
-   // DEBUG
-   /*
-   cout << "Cantidad ejecuciones por hebra:" << cantidad_de_ejecuciones_por_hebra << endl;
-   cout << "Numero de hebras con cantidad de ejecuciones normal: " << num_hebras_con_cantidad_ejecuciones_normal << endl;
-   cout << "Numero de hebras: " << NUM_HEBRAS << endl;
-   cout << "Numero de items: " << NUM_ITEMS << endl;
-   cout << endl;
-   */
-
-   // Inicialización hebras
-   for (size_t i = 0; i < num_hebras_con_cantidad_ejecuciones_normal_prod; i++)
-      hebras_productoras[i] = thread(funcion_hebra_productora, cantidad_de_ejecuciones_por_hebra_prod, monitor);
-   // Lógica de inicialización para los casos donde num_items / num_hebras no es una división entera
-   if (num_hebras_con_cantidad_ejecuciones_normal_prod != NUM_HEBRAS_PROD)
-      hebras_productoras[NUM_HEBRAS_PROD - 1] = thread(funcion_hebra_productora, cantidad_de_ejecuciones_por_hebra_prod + 1, monitor);
+   for (int i = 0; i < NUM_CONS; i++){
+       hebras_consumidoras[i] = thread(funcion_hebra_consumidora, CANTIDAD_DATOS_A_CONSUMIR, monitor);
+   }
    
-   for (size_t i = 0; i < num_hebras_con_cantidad_ejecuciones_normal_cons; i++)
-      hebras_consumidoras[i] = thread(funcion_hebra_consumidora, cantidad_de_ejecuciones_por_hebra_cons, monitor);
-   // Lógica de inicialización para los casos donde num_items / num_hebras no es una división entera
-   if (num_hebras_con_cantidad_ejecuciones_normal_cons != NUM_HEBRAS_CONS)
-      hebras_consumidoras[NUM_HEBRAS_CONS - 1] = thread(funcion_hebra_consumidora, cantidad_de_ejecuciones_por_hebra_cons + 1, monitor);
+   for (int i = 0; i < NUM_PROD; i++){
+       hebras_productoras[i].join();
+   }
    
+   for (int i = 0; i < NUM_CONS; i++){
+       hebras_consumidoras[i].join();
+   }
 
-
-   // Finalización hebras
-   for (size_t i = 0; i < NUM_HEBRAS_PROD; i++)
-      hebras_productoras[i].join();
-   for (size_t i = 0; i < NUM_HEBRAS_CONS; i++)
-      hebras_consumidoras[i].join();
-
-   test_contadores() ;
+   test_contadores();
 }

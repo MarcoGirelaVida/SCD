@@ -29,14 +29,20 @@ using namespace scd ;
  * @var NUM_ITEMS
  * @brief Número de items a producir/consumir.
  */
-constexpr int NUM_ITEMS = 2000000;
+constexpr int NUM_ITEMS = 20000;
 
 /**
- * @var NUM_HEBRAS
- * @brief Número de hebras a utilizar.
+ * @brief Número de hilos productores.
  */
-constexpr int NUM_HEBRAS = 2000;
+constexpr int NUM_PROD = 2000;
 
+/**
+ * @brief Número de hilos consumidores.
+ */
+constexpr int NUM_CONS = 2000;
+
+const unsigned int CANTIDAD_DATOS_A_PRODUCIR = NUM_ITEMS/NUM_PROD;
+const unsigned int CANTIDAD_DATOS_A_CONSUMIR = NUM_ITEMS/NUM_CONS;
 /**
  * @var siguiente_dato
  * @brief Siguiente valor a devolver en 'producir_dato'.
@@ -91,11 +97,13 @@ int producir_dato(  )
    // También había pensado en poner esta función como un método del monitor, pero entonces
    // no se podría dar el tiempo de espera concurrentemente
    this_thread::sleep_for( chrono::milliseconds( aleatorio<min_ms,max_ms>() ));
+
    mtx.lock();
    const int valor_producido = siguiente_dato ;
    siguiente_dato ++ ;
    cout << "hebra productora, produce " << valor_producido << endl << flush ;
    mtx.unlock();
+
    cont_prod[valor_producido]++ ;
    return valor_producido ;
 }
@@ -114,6 +122,7 @@ void consumir_dato( unsigned valor_consumir )
       cout << " valor a consumir === " << valor_consumir << ", num_items == " << NUM_ITEMS << endl ;
       assert( valor_consumir < NUM_ITEMS );
    }
+
    cont_cons[valor_consumir] ++ ;
    this_thread::sleep_for( chrono::milliseconds( aleatorio<min_ms,max_ms>() ));
    mtx.lock();
@@ -257,6 +266,7 @@ void funcion_hebra_consumidora(const unsigned int cantidad_numeros_a_producir, M
       consumir_dato( valor ) ;
    }
 }
+
 // -----------------------------------------------------------------------------
 /**
  * @brief Función principal.
@@ -268,49 +278,199 @@ void funcion_hebra_consumidora(const unsigned int cantidad_numeros_a_producir, M
 
 int main()
 {
-   cout << "--------------------------------------------------------------------" << endl
-        << "Problema del productor-consumidor múltiple (Monitor SU, buffer LIFO). " << endl
-        << "--------------------------------------------------------------------" << endl
+   cout << "-----------------------------------------------------------------" << endl
+        << "Problema de los productores-consumidores multiple monitores (solución LIFO)." << endl
+        << "------------------------------------------------------------------" << endl
         << flush ;
 
-   // Declaraciones
    MRef<ProdConsSU1> monitor = Create<ProdConsSU1>() ;
-   thread hebras_productoras[NUM_HEBRAS];
-   thread hebras_consumidoras[NUM_HEBRAS];
-   const unsigned int cantidad_de_ejecuciones_por_hebra = NUM_ITEMS / NUM_HEBRAS;
-
-   // Lógica para los casos en los que el número de items no es una división entera con numero de hebras
-   bool items_son_divisibles_entre_hebras = (NUM_ITEMS % NUM_HEBRAS) == 0;
-   const unsigned int num_hebras_con_cantidad_ejecuciones_normal = items_son_divisibles_entre_hebras ? NUM_HEBRAS : (NUM_HEBRAS - 1);
-
-   // DEBUG
-   /*
-   cout << "Cantidad ejecuciones por hebra:" << cantidad_de_ejecuciones_por_hebra << endl;
-   cout << "Numero de hebras con cantidad de ejecuciones normal: " << num_hebras_con_cantidad_ejecuciones_normal << endl;
-   cout << "Numero de hebras: " << NUM_HEBRAS << endl;
-   cout << "Numero de items: " << NUM_ITEMS << endl;
-   cout << endl;
-   */
-
-   // Inicialización hebras
-   for (size_t i = 0; i < num_hebras_con_cantidad_ejecuciones_normal; i++)
-   {
-      hebras_productoras[i] = thread(funcion_hebra_productora, cantidad_de_ejecuciones_por_hebra, monitor);
-      hebras_consumidoras[i] = thread(funcion_hebra_consumidora, cantidad_de_ejecuciones_por_hebra, monitor);
-   }
-   // Lógica de inicialización para los casos donde num_items / num_hebras no es una división entera
-   if (num_hebras_con_cantidad_ejecuciones_normal != NUM_HEBRAS)
-   {
-      hebras_productoras[NUM_HEBRAS - 1] = thread(funcion_hebra_productora, cantidad_de_ejecuciones_por_hebra + 1, monitor);
-      hebras_consumidoras[NUM_HEBRAS - 1] = thread(funcion_hebra_consumidora, cantidad_de_ejecuciones_por_hebra + 1, monitor);
+   thread hebras_productoras[NUM_PROD];
+   thread hebras_consumidoras[NUM_CONS];
+   
+   for (int i = 0; i < NUM_PROD; i++){
+       hebras_productoras[i] = thread(funcion_hebra_productora, CANTIDAD_DATOS_A_PRODUCIR, monitor);
    }
    
-   // Finalización hebras
-   for (size_t i = 0; i < NUM_HEBRAS; i++)
-   {
-      hebras_productoras[i].join();
-      hebras_consumidoras[i].join();
+   for (int i = 0; i < NUM_CONS; i++){
+       hebras_consumidoras[i] = thread(funcion_hebra_consumidora, CANTIDAD_DATOS_A_CONSUMIR, monitor);
+   }
+   
+   for (int i = 0; i < NUM_PROD; i++){
+       hebras_productoras[i].join();
+   }
+   
+   for (int i = 0; i < NUM_CONS; i++){
+       hebras_consumidoras[i].join();
    }
 
-   test_contadores() ;
+   test_contadores();
 }
+
+
+
+/*******************************************/
+/*******************************************/
+/* 
+//PRODCONS LIFO CON SEMÁFOROS
+#include <iostream>
+#include <cassert>
+#include <thread>
+#include <mutex>
+#include <random>
+#include <atomic> 
+#include "scd.h"
+
+//PARA COMPILAR -> g++ -std=c++11 -pthread -I./include -o prod_cons1_dinamico ./bin//prod_cons1_dinamico.cpp ./bin/scd.cpp
+
+using namespace std ;
+using namespace scd ;
+
+//**********************************************************************
+// Variables globales
+const int NUM_ITEMS = 20000;
+const int NUM_PROD = 10; //Número de productores
+const int NUM_CONS = 10; //Número de consumidores
+const unsigned int CONSUMIDOS_POR_CONSUMIDOR = NUM_ITEMS/NUM_CONS;
+const unsigned int PRODUCTOS_POR_PRODUCTOR = NUM_ITEMS/NUM_PROD;
+
+mutex mtx; // Declaración cerrojo usado para insertar-extraer (pues estamos en una pila)
+mutex output;
+
+const unsigned 
+	tam_vec   = 10 ;   // tamaño del buffer
+
+//atomic<int> producidos(NUM_ITEMS); //Declaración variables atómicas usadas como contador de productos producidos y consumidos
+//atomic<int> consumidos(0); //Declaración variables atómicas usadas como contador de productos producidos y consumidos
+
+unsigned  
+   cont_prod[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha producido.
+   cont_cons[NUM_ITEMS] = {0}, // contadores de verificación: para cada dato, número de veces que se ha consumido.
+        
+   siguiente_dato       = 0 ;// siguiente dato a producir en 'producir_dato' (solo se usa ahí)
+   int productos[tam_vec]; 
+
+   Semaphore libres = tam_vec; // semáforo que indica si hay posiciones libres en las cuales insertar
+   Semaphore ocupadas = 0; // semáforo que indica si hay posiciones ocupadas que leer
+   
+   int primera_libre = 0; //indica la posición de lectura/escritura de la pila
+
+//**********************************************************************
+// funciones comunes a las dos soluciones (fifo y lifo)
+//----------------------------------------------------------------------
+
+unsigned producir_dato(int indice)
+{
+   this_thread::sleep_for( chrono::milliseconds( aleatorio<700,900>() ));//tiempo en producir
+
+      const unsigned dato_producido = siguiente_dato ; 
+      
+      siguiente_dato++ ; 
+      cont_prod[dato_producido] ++ ; //señala que ya se ha producido dicho dato (no se producirán más así)
+      
+   output.lock();
+      cout << "producido: " << dato_producido << endl << flush ;
+   output.unlock();
+
+   return dato_producido;
+}
+//----------------------------------------------------------------------
+
+void consumir_dato( unsigned dato, int indice )
+{
+   assert( dato < NUM_ITEMS ); //da error si dato es mayor que el NUM_ITEMS
+   cont_cons[dato] ++;
+   
+   this_thread::sleep_for( chrono::milliseconds( aleatorio<5,5>() )); //tiempo que tarda en consumir
+
+   output.lock();
+   cout << "                  consumido: " << dato << endl ;
+   output.unlock();
+}
+
+//----------------------------------------------------------------------
+
+void test_contadores() //test para comprobar que no se ha producido/consumido de más
+{
+   bool ok = true ;
+   cout << "comprobando contadores ...." ;
+   for( unsigned i = 0 ; i < NUM_ITEMS ; i++ )
+   {  if ( cont_prod[i] != 1 )
+      {  cout << "error: valor " << i << " producido " << cont_prod[i] << " veces." << endl ;
+         ok = false ;
+      }
+      if ( cont_cons[i] != 1 )
+      {  cout << "error: valor " << i << " consumido " << cont_cons[i] << " veces" << endl ;
+         ok = false ;
+      }
+   }
+   if (ok)
+      cout << endl << flush << "solución (aparentemente) correcta." << endl << flush ;
+}
+
+//----------------------------------------------------------------------
+
+void  funcion_hebra_productora(unsigned indice)
+{     
+     for (size_t i = indice*PRODUCTOS_POR_PRODUCTOR; i < PRODUCTOS_POR_PRODUCTOR*(indice+1); i++){
+        //producidos--; // está garantizada la em de este contador -> tipo atómico
+        int dato = producir_dato(indice) ;
+        
+        sem_wait(libres);     // decrementa el valor de libres, si es 0 espera
+         mtx.lock();          // cerrojo que garantiza que dos o más hebras no accedan a la misma posiciónd e memoria/variable a la vez
+            productos[primera_libre] = dato;
+            primera_libre++;
+         mtx.unlock();
+        sem_signal(ocupadas); //aumenta el valor de ocupados
+              
+      }   
+}
+
+//----------------------------------------------------------------------
+
+void funcion_hebra_consumidora(unsigned indice)
+{     
+   for (size_t i = indice*CONSUMIDOS_POR_CONSUMIDOR; i < CONSUMIDOS_POR_CONSUMIDOR*(indice+1); i++){
+      //consumidos++;
+      int dato ;
+      
+      sem_wait(ocupadas);     //decrementa el valor, si es 0 espera
+         mtx.lock();
+            primera_libre--;
+            dato = productos[primera_libre]; 
+         mtx.unlock();       
+      sem_signal(libres);     //aumenta el valor, pues se ha consumido un producto
+      
+      consumir_dato(dato, indice) ;
+    }   
+}
+
+//----------------------------------------------------------------------
+int main()
+{
+   cout << "-----------------------------------------------------------------" << endl
+        << "Problema de los productores-consumidores dinámico (solución LIFO)." << endl
+        << "------------------------------------------------------------------" << endl
+        << flush ;
+   
+   thread hebras_productoras[NUM_PROD];
+   thread hebras_consumidoras[NUM_CONS];
+   
+   for (size_t i = 0; i < NUM_PROD; i++){
+       hebras_productoras[i] = thread(funcion_hebra_productora, i);
+   }
+   
+   for (size_t i = 0; i < NUM_CONS; i++){
+       hebras_consumidoras[i] = thread(funcion_hebra_consumidora, i);
+   }
+   
+   for (size_t i = 0; i < NUM_PROD; i++){
+       hebras_productoras[i].join();
+   }
+   
+   for (size_t i = 0; i < NUM_CONS; i++){
+       hebras_consumidoras[i].join();
+   }
+
+   test_contadores();
+}
+*/
