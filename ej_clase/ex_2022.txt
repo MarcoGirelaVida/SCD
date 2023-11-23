@@ -1,0 +1,44 @@
+montitor Ss
+{
+    unsigned short int contador_ejecuciones_S1 = 0;
+    unsigned short int contador_ejecuciones_S2 = 0;
+    bool monitor_ocupado_S1;
+
+    esperando_monitor_libreS1;
+    esperando_monitor_libreS2;
+    S2s_esperando;
+
+    previo1()
+    {
+        if(monitor_ocupado_S1 == false)
+            esperando_monitor_libre.wait();
+        
+        contador_ejecuciones_S1++;
+    }
+
+    previo2()
+    {
+        while (contador_ejecuciones_S2 > contador_ejecuciones_S1*3)
+            S2s_esperando.wait();
+
+        if(monitor_ocupado_S1)
+            esperando_monitor_libre.wait();
+
+        monitor_ocupado_S1 = false;
+        contador_ejecuciones_S2++;
+        
+        S2s_esperando.signal();
+        esperando_monitor_libreS2.signal;
+    }
+
+    posterior1()
+    {
+        S2s_esperando.signal(); // 
+        esperando_monitor_libreS2.signal();
+    }
+
+    posterior2()
+    {
+        esperando_monitor_libreS1.signal();
+    }
+}

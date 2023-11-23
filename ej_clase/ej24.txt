@@ -1,0 +1,34 @@
+1 cuenta de ahorros -> Varias personas
+
+monitor cuenta_de_ahorros
+{
+    unsigned saldo;
+    CondVar pagos_pendientes;
+    CondVar cliente_a_la_espera;
+
+    depositar(const unsigned cantidad)
+    retirar(const unsigned cantidad)
+}
+
+cuenta_de_ahorros(const unsigned s)
+{
+    saldo = s;
+}
+
+depositar(const unsigned cantidad_ingresar)
+{
+    saldo += cantidad_ingresar;
+    signal(cliente_a_la_espera);
+}
+
+retirar(const unsigned cantidad_solicitada)
+{
+    if (cliente_a_la_espera.size != 0)
+        wait(pagos_pendientes);
+
+    while (cantidad_solicitada > saldo)
+        wait(cliente_a_la_espera);
+    
+    saldo -= cantidad_solicitada;
+    signal(pagos_pendientes);
+}

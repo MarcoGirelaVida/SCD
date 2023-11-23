@@ -1,0 +1,14 @@
+
+// Está mal, ver soluciones (es facil en realidad)
+Semaphore pares = 0;
+mutex.wait
+    n++;
+    pares.signal();
+    pares.wait();   //Proceso 2 despierta a 1 y se queda aquí
+    pares.wait();   //Proceso 1 se queda aquí
+
+    n = 0;
+
+    pares.signal(); 
+    pares.signal(); //Proceso 1 despiera a 2 para que siga
+mutex.signal

@@ -1,0 +1,46 @@
+const MAX_CARGA = 240kg;
+
+monitor camion
+{
+    unsigned carga_actual = 0;
+    bool camion_en_anden = false;
+
+    CondVar cola_robots;
+    CondVar camion_esperando;
+
+    robot_carga(carga_robot)
+    {
+        while (!camion_en_anden)
+            cola_robots.wait();
+
+        while ((carga_actual + carga_robot) > MAX_CARGA)
+            cola_robots.signal();
+            cola_robots.wait();
+
+        carga_actual += carga_robot;
+    }
+
+    salida_robot()
+    {
+        if(carga_actual == MAX_CAPACIDAD)
+            camion_esperando.signal()
+        else
+            cola_robots.signal();
+    }
+
+    entra_camion()
+    {
+        if (carga_actual < MAX_CARGA)
+        {
+            camion_en_anden = true;
+            cola_robots.signal();
+            camion_esperando.wait();
+        }
+    }
+
+    salida_camion()
+    {
+        carga_actual = 0;
+        camion_en_anden = false;
+    }
+}

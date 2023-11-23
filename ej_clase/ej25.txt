@@ -1,0 +1,23 @@
+
+
+
+monitor recurso
+{
+    recurso_ocupado = false;
+
+    cola_espera;
+}
+
+pedir_recurso(int prioridad)
+{
+    if(recurso_ocupado)
+        cola_espera.wait(prioridad)
+
+    recurso_ocupado = true;
+}
+
+liberar_recurso()
+{
+    recurso_ocupado = false;
+    cola_espera.signal();
+}

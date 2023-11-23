@@ -1,0 +1,40 @@
+
+monitor Splash
+{
+    contador_aforo = 0;
+    contador_usos = 0;
+    CondVar usuarios_esperando;
+    CondVar trabajador_esperando;
+
+    entrada()
+    {
+        if (contador_aforo >= 30 || contador_usos >= 200)
+            usuarios_esperando.wait();
+
+        contador_aforo++;
+        contador_usos++;
+
+    }
+
+    salida()
+    {
+        contador_aforo--;
+
+        if (contador_usos >= 200 && contador_aforo == 0)
+            trabajador_esperando.signal();
+        else
+            usuarios_esperando.signal();
+    }
+
+    espera()
+    {
+        if (contador_usos >= 200)
+            trabajador_esperando.wait();
+    }
+
+    fin_trabajos()
+    {
+        contador_usos = 0;
+        usuarios_esperando.signal();
+    }
+}

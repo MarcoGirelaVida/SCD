@@ -1,0 +1,27 @@
+
+// Está regular
+monitor mesa
+{
+    int propietario_tenedor[6] = {0}  // 0 = nadie
+    int contador_esperando = 0;
+    CondVar esperando_tenedor[5];
+
+    coge_tenedor(numero_tenedor, numero_proceso)
+    {
+        contador_esperando++;
+
+        if (propietario_tenedor[numero_tenedor] != 0)
+            if (contador_esperando == 5)
+                libera_tenedor[numero_tenedor];
+            else
+                esperando_tenedor[numero_tenedor];
+
+        contador_esperando--;
+    }
+
+    libera_tenedor(numero_tenedor)
+    {
+        propietario_tenedor[numero_tenedor] = 0;
+        esperando_tenedor[numero_tenedor].signal();
+    }
+}
