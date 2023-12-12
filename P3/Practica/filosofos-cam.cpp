@@ -27,10 +27,9 @@ const int
    num_filo_ten  = 2*num_filosofos,       // número de filósofos y tenedores 
    num_procesos  = num_filo_ten + 1,      // número de procesos total (por ahora solo hay filo y ten)
    ID_CAMARERO = 10,                       // El id que deseamos que tenga el camarero
-   TAG_TENEDORES = 0,
-   TAG_CAMARERO = 1,
+   tag_tenedores = 0,
    tag_camarero_termina_comer = 2,
-   tag_camarero_solicitud_asiento = 3;
+   tag_camarero_solicitud_asiento = 3;       // Se que estoy usando variables globales y no se debe hacer eso pero imaginese que se trata de "conocimientos comunes" a todos los procesos
 
 //**********************************************************************
 // plantilla de función para generar un entero aleatorio uniformemente
@@ -47,7 +46,7 @@ template< int min, int max > int aleatorio()
 
 // ---------------------------------------------------------------------
 
-void funcion_filosofos( const int id, const int id_camarero, const int tag_tenedores, const int tag_camarero)
+void funcion_filosofos( const int id, const int id_camarero)
 {
    MPI_Status estado;
    int id_ten_izq = (id+1)  % num_filo_ten, //id. tenedor izq.
@@ -58,9 +57,9 @@ void funcion_filosofos( const int id, const int id_camarero, const int tag_tened
    {
       char solicito_sentarme = 's';
       char puedo_sentarme;
-      cout << "Filósofo " << id << " se sienta a la mesa." << endl;
       MPI_Ssend(&solicito_sentarme, 1, MPI_CHAR, id_camarero, tag_camarero_solicitud_asiento, MPI_COMM_WORLD);
       MPI_Recv(&puedo_sentarme, 1, MPI_CHAR, id_camarero, tag_camarero_solicitud_asiento, MPI_COMM_WORLD, &estado);
+      cout << "Filósofo " << id << " se sienta a la mesa." << endl;
       // Se usa Ssend para que la comunicación se síncrona segura
 
       char solicito_tenedor = 's';
@@ -86,9 +85,9 @@ void funcion_filosofos( const int id, const int id_camarero, const int tag_tened
      
 
       char termine_de_comer = 't';
-      cout<< "Filósofo " << id <<" se levanta de la mesa" <<id_ten_der <<endl;
+      cout<< "Filósofo " << id <<" se levanta de la mesa " << endl;
       MPI_Ssend(&termine_de_comer, 1, MPI_CHAR, id_camarero, tag_camarero_termina_comer, MPI_COMM_WORLD);
-
+      // No hace falta hacer un recev de la confirmación del camarero, es asincrona segura
 
       cout << "Filosofo " << id << " comienza a pensar" << endl;
       sleep_for( milliseconds( aleatorio<10,100>() ) );
@@ -96,7 +95,7 @@ void funcion_filosofos( const int id, const int id_camarero, const int tag_tened
 }
 // ---------------------------------------------------------------------
 
-void funcion_tenedores( const int id, const int tag_tenedores)
+void funcion_tenedores( const int id )
 {
    int valor, id_filosofo ;  // valor recibido, identificador del filósofo
    MPI_Status estado ;       // metadatos de las dos recepciones
@@ -120,7 +119,7 @@ void funcion_tenedores( const int id, const int tag_tenedores)
    }
 }
 
-void funcion_camarero(const int tag_camarero)
+void funcion_camarero()
 {
    int id_filosofo_solicitante;  // valor recibido, identificador del filósofo
    MPI_Status estado ;       // metadatos de las dos recepciones
@@ -130,15 +129,14 @@ void funcion_camarero(const int tag_camarero)
 
    while (true)
    {
-      //MPI_Iprobe( MPI_ANY_SOURCE, tag_camarero, MPI_COMM_WORLD, &hay_mensaje_pendiente, &estado);
-      if (filosofos_sentados >= 4)
-      {
-         MPI_Recv(&mensaje, 1, MPI_CHAR, MPI_ANY_SOURCE, tag_camarero_termina_comer, MPI_COMM_WORLD, &estado);
+      int etiqueta_a_recibir = tag_camarero_termina_comer;
+      if (filosofos_sentados < 4)
+         etiqueta_a_recibir = MPI_ANY_TAG;
+      MPI_Recv(&mensaje, 1, MPI_CHAR, MPI_ANY_SOURCE, etiqueta_a_recibir, MPI_COMM_WORLD, &estado);
+ 
+      if (estado.MPI_TAG  == tag_camarero_termina_comer)
          filosofos_sentados--;
-      }
-      else
-      {
-         MPI_Recv(&mensaje, 1, MPI_CHAR, MPI_ANY_SOURCE, tag_camarero_solicitud_asiento, MPI_COMM_WORLD, &estado);
+      else {
          filosofos_sentados++;
          id_filosofo_solicitante = estado.MPI_SOURCE;
          MPI_Ssend(&puedes_sentarte, 1, MPI_CHAR, id_filosofo_solicitante, tag_camarero_solicitud_asiento, MPI_COMM_WORLD);
@@ -161,11 +159,11 @@ int main( int argc, char** argv )
    {
       // ejecutar la función correspondiente a 'id_propio'
       if (id_propio == ID_CAMARERO)
-         funcion_camarero( TAG_CAMARERO );
+         funcion_camarero();
       else if (id_propio % 2 == 0)           // si es par (por tanto cualquiera de una mitad de los procesos)
-         funcion_filosofos( id_propio, ID_CAMARERO, TAG_TENEDORES, TAG_CAMARERO);     //   es un filósofo
+         funcion_filosofos( id_propio, ID_CAMARERO);     //   es un filósofo
       else                                   // si es impar (por tanto cualquiera de una segunda mitad de los procesos)
-         funcion_tenedores( id_propio , TAG_TENEDORES);     //   es un tenedor
+         funcion_tenedores( id_propio);     //   es un tenedor
    }
    else
    {
