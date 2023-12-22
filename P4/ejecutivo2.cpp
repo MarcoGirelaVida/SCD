@@ -3,9 +3,41 @@
 // Sistemas concurrentes y Distribuidos.
 // Práctica 4. Implementación de sistemas de tiempo real.
 //
+//   Datos de las tareas:
+//   ------------
+//   Ta.  T    C
+//   ------------
+//   A  500  100
+//   B  500  150
+//   C  1000 200
+//   D  2000 240
+//  -------------
+//
+//  Planificación (con Ts == 500 ms)
+//  *--------------*-------------*-------------*------------*
+//  | A B C +50ms  | A B D +10ms | A B C +50ms | A B +250ms |
+//  *--------------*-------------*-------------*------------*
+//  
+//
 // Archivo: ejecutivo2.cpp
 // -----------------------------------------------------------------------------
 
+/*
+1- ¿cual es el mínimo tiempo de espera que queda al final de las
+iteraciones del ciclo secundario con tu solución?
+   En la primera iteración queda un tiempo de espera teórico de 50ms.
+   En la segunda, uno de 10ms.
+   En la tercera 50ms.
+   Y por último en la cuarta 250ms.
+
+   Por tanto el tiempo mínimo de espera es 10ms en la segunda iteración
+
+2- ¿sería planificable si la tarea D tuviese un tiempo cómputo de 250ms?
+   En teoría sí puesto que sería capaz de entrar en los 500ms que constituyen
+una iteración, no obstante en la práctica (al menos la simulación que estamos haciendo nosotros)
+no sería posible puesto que los sleep_until no son precisos y siempre tienen un pequeño excedente
+que en este caso, por pequeño que fuese, supodría vulnerar la ejecución de D o A (que es el proceso que le sucede).
+*/
 #include <string>
 #include <iostream> // cout, cerr
 #include <thread>
@@ -106,18 +138,3 @@ int main( int argc, char *argv[] )
       }
    }
 }
-
-/*
-1- ¿cual es el mínimo tiempo de espera que queda al final de las
-iteraciones del ciclo secundario con tu solución?
-   En la primera iteración queda un tiempo de espera (teórico) de 50ms.
-   En la segunda, uno de 10ms.
-   En la tercera 50ms.
-   Y por último en la cuarta 250ms.
-
-2- ¿sería planificable si la tarea D tuviese un tiempo cómputo de 250ms?
-   En teoría sí puesto que sería capaz de entrar en los 500ms que constituyen
-una iteración, no obstante en la práctica (al menos la simulación que estamos haciendo nosotros)
-no sería posible puesto que los sleep_until no son precisos y siempre tienen un pequeño excedente
-que en este caso, por pequeño que fuese, supodría vulnerar la ejecución o de D o de A, que es el proceso que le sucede.
-*/

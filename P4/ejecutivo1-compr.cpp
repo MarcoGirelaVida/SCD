@@ -74,16 +74,16 @@ int main( int argc, char *argv[] )
             case 3 : TareaA(); TareaB(); TareaC(); T_esperado += T_C;                     break ;
             case 4 : TareaA(); TareaB(); TareaD(); T_esperado += T_D;                     break ;
          }
-
-         // Calculo cual era el tiempo esperado y cuál ha sido el real y lo muestro
-         time_point<steady_clock> fin_sec = steady_clock::now();
-         milliseconds_f duracion_ciclo_250ms = fin_sec - ini_sec;
-         cout << "Se ha tardado " << duracion_ciclo_250ms.count() << " milisegundos en lugar de los " << T_esperado.count() << " esperados." << endl;
+         time_point<steady_clock> fin_sec = steady_clock::now(); // Registro el tiempo de finalización
 
          // calcular el siguiente instante de inicio del ciclo secundario
          ini_sec += Ts_ms;
          // esperar hasta el inicio de la siguiente iteración del ciclo secundario
          sleep_until( ini_sec );
+
+         // Calculo cual era el tiempo esperado y cuál ha sido el real y lo muestro
+         milliseconds_f duracion_ciclo_250ms = fin_sec - (ini_sec - Ts_ms);
+         cout << "Se ha tardado " << duracion_ciclo_250ms.count() << " milisegundos en lugar de los " << T_esperado.count() << " esperados." << endl;
       }
    }
 }
